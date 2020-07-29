@@ -52,7 +52,9 @@ class Psycopg2Test(DBAPITest):
                 break
             except psycopg2.OperationalError:
                 sleep(.25)
-        return tracer, conn
+        yield tracer, conn
+        conn.close()
+
 
 
 class TestPsycopgCursorContext(Psycopg2Test):
@@ -358,6 +360,19 @@ class TestPsycopgConnectionContext(Psycopg2Test):
         assert second.operation_name == 'cursor.callproc(test_function_two)'
         assert commit.operation_name == 'LogicalReplicationConnection.commit()'
         assert parent.operation_name == 'Parent'
+
+    @pytest.mark.parametrize('scrollable, withhold', [
+        (False, True),
+        (True, False),
+        (False, False),
+    ])
+    def test_cursor_kwargs(self, connection_tracing, scrollable, withhold):
+        tracer, conn = connection_tracing
+        cursor = conn.cursor("Name", scrollable=scrollable, withhold=withhold)
+        assert cursor.name == "Name"
+        assert cursor.scrollable is scrollable
+        assert cursor.withhold is withhold
+        cursor.close()
 
     def test_unsuccessful_callproc(self, connection_tracing):
         tracer, conn = connection_tracing

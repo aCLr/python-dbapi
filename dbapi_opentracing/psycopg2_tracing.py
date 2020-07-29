@@ -78,7 +78,10 @@ class PsycopgCursorTracing(object):
                             trace_executemany=kw.pop('trace_executemany', True),
                             trace_callproc=kw.pop('trace_callproc', True)
                         )
-                        factory.__init__(self, conn, *a, **kw)
+                        factory.__init__(self, conn, name=kw.pop('name', None))
+                        for key, value in kw.items():
+                            assert key in factory.__dict__
+                            setattr(self, key, value)
 
                 CursorFactory.__name__ = factory.__name__
                 _cursor_factory_classes[factory] = CursorFactory
